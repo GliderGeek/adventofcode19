@@ -53,12 +53,11 @@ func get_index0_value(noun int, verb int) int {
         } else if opcode == 2 {
             values[values[opcode_index+3]] = values[values[opcode_index+1]] * values[values[opcode_index+2]]
         } else{
-            fmt.Println("Something went wrong")
+            panic("Unexpected fault")
         }
 
         opcode_index += 4
         opcode = values[opcode_index]
-
     } 
 
     return values[0]
@@ -69,25 +68,16 @@ func part1(){
 }
 
 func part2(){
-    found := false
     target := 19690720
-    var result int
 
-    for noun := 0; noun < 100; noun ++ {
+    loop: for noun := 0; noun < 100; noun ++ {
         for verb := 0; verb < 100; verb ++ {
             if target == get_index0_value(noun, verb){
-                found = true
-                result = 100 * noun + verb
-                break
+                fmt.Println("Result part 2 is:", 100 * noun + verb)
+                break loop
             }
         }
-
-        if found {
-            break
-        }
-    }
-
-    fmt.Println("Result part 2 is:", result)
+    }  
 }
 
 func main() { 
