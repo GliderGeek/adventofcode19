@@ -31,7 +31,6 @@ func get_input(file_name string) [2][]string {
     // var value int
     var wires [2][]string
 
-
     for i, line := range lines{
         wires[i] = strings.Split(line, ",")
     }
@@ -76,22 +75,14 @@ func get_key(x int, y int) string {
 
 func get_minimum_manhattan_distance(intersection_keys []string) int {
 
-    val_set := false  //TODO: can this be done more elegantly? null value?
     min := 0
     var x int
     var y int
-    var dist int
 
     for _, key := range intersection_keys {
         x, y = get_values(key)
-        dist = abs(x) + abs(y)
-        if val_set {
-            if dist < min {
-                min = dist
-            }
-        } else {
-            min = dist
-            val_set = true
+        if min == 0 || (abs(x) + abs(y)) < min {
+            min = abs(x) + abs(y)
         }
     }
 
@@ -112,31 +103,19 @@ func get_intersection_keys(wires [2][]string) []string{
         y = 0
 
         for _, instruction := range wire{
-
             value, _ = strconv.Atoi(string(instruction[1:]))
-            direction := string(instruction[0])
-
-            switch direction {
-            case "R": 
-                for i := 0; i < value; i++ {
-                    x += 1
-                    visited, intersection_keys = evaluate_visited(visited, x, y, wire_index, intersection_keys)
+            for i := 0; i < value; i++ {
+                switch direction := instruction[0]; direction {
+                case 'R':
+                    x++
+                case 'L':
+                    x--
+                case 'U':
+                    y++
+                case 'D':
+                    y--
                 }
-            case "L":
-                for i := 0; i < value; i++ {
-                    x -= 1
-                    visited, intersection_keys = evaluate_visited(visited, x, y, wire_index, intersection_keys)
-                }
-            case "U":
-                for i := 0; i < value; i++ {
-                    y += 1
-                    visited, intersection_keys = evaluate_visited(visited, x, y, wire_index, intersection_keys)
-                }
-            case "D":
-                for i := 0; i < value; i++ {
-                    y -= 1
-                    visited, intersection_keys = evaluate_visited(visited, x, y, wire_index, intersection_keys)
-                }
+                visited, intersection_keys = evaluate_visited(visited, x, y, wire_index, intersection_keys)
             }
         }
     }
@@ -157,10 +136,14 @@ func update_minimum_steps(minimum_steps map[string]int, x int, y int, steps int)
 
 func get_minimum_number_of_steps(intersection_keys []string, wires [2][]string ) int {
 
-    //initialize map with number_of_steps. 0 is uninitialized
-    var minimum_steps map[string]int
+    //map from intersection key to minimum steps needed
+    //initialized with 0-s
+    //re-used per wire
+    var minimum_steps map[string]int  
     minimum_steps = make(map[string]int)
     
+    //map from intersection key to minimum steps
+    //not used per wire, global
     var steps_per_intersection map[string]int
     steps_per_intersection = make(map[string]int)
     for _, key := range intersection_keys{
@@ -169,7 +152,6 @@ func get_minimum_number_of_steps(intersection_keys []string, wires [2][]string )
 
     var steps int
     var value int
-    var direction string
     var x int
     var y int
 
@@ -183,46 +165,31 @@ func get_minimum_number_of_steps(intersection_keys []string, wires [2][]string )
         x = 0
         y = 0
 
-
         for _, instruction := range wire{
 
             value, _ = strconv.Atoi(string(instruction[1:]))
-            direction = string(instruction[0])
-
-            switch direction {
-            case "R": 
-                for i := 0; i < value; i++ {
-                    x += 1
-                    steps += 1
-                    minimum_steps = update_minimum_steps(minimum_steps, x, y, steps)
+            for i := 0; i < value; i++ {
+                switch direction := instruction[0]; direction {
+                case 'R': 
+                    x++
+                case 'L':
+                    x--
+                case 'U':
+                    y++
+                case 'D':
+                    y--
                 }
-            case "L":
-                for i := 0; i < value; i++ {
-                    x -= 1
-                    steps += 1
-                    minimum_steps = update_minimum_steps(minimum_steps, x, y, steps)
-                }
-            case "U":
-                for i := 0; i < value; i++ {
-                    y += 1
-                    steps += 1
-                    minimum_steps = update_minimum_steps(minimum_steps, x, y, steps)
-                }
-            case "D":
-                for i := 0; i < value; i++ {
-                    y -= 1
-                    steps += 1
-                    minimum_steps = update_minimum_steps(minimum_steps, x, y, steps)
-                }
+                steps += 1
+                minimum_steps = update_minimum_steps(minimum_steps, x, y, steps)
             }
         }
 
         for key, value := range minimum_steps{
             steps_per_intersection[key] += value
         }
-
     }
 
+    //find minimum number of steps
     min := 0
     for _, val := range steps_per_intersection{
         if min ==0 || val < min {
