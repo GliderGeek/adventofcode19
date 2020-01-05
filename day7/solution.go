@@ -9,6 +9,18 @@ import (
 	"strings"
 )
 
+type Amplifier struct {
+	values     []int
+	instructionIndex int
+	phaseSetting int
+}
+
+func getOpcode(amplifier *Amplifier) int {
+	instruction := amplifier.values[amplifier.instructionIndex]
+	opcode, _ := parseInstruction(instruction)
+	return opcode
+}
+
 func get_input(file_name string) []int {
 	file, err := os.Open(file_name)
 	if err != nil {
@@ -61,109 +73,95 @@ func parseInstruction(instruction int) (int, []int) {
 	return opcode, parameterModes
 }
 
-func getValue(values []int, parameterMode int, parameterIndex int) int {
+func getValue(amplifier *Amplifier, parameterMode int, parameterIndex int) int {
 	switch parameterMode {
 	case 0:
-		return values[values[parameterIndex]]
+		return amplifier.values[amplifier.values[parameterIndex]]
 	case 1:
-		return values[parameterIndex]
+		return amplifier.values[parameterIndex]
 	default:
 		panic("error")
 	}
 }
 
-func inputInstruction(values []int, instructionIndex int, input int) ([]int, int) {
-	values[values[instructionIndex+1]] = input
-	instructionIndex += 2
-	return values, instructionIndex
+func inputInstruction(amplifier *Amplifier, input int) {
+	index := amplifier.values[amplifier.instructionIndex+1]
+	amplifier.values[index] = input
+	amplifier.instructionIndex += 2
 }
 
-func executeInstruction(values []int, instructionIndex int) ([]int, int) {
-	var value1, value2 int
-	instruction := values[instructionIndex]
+func executeInstruction(amplifier *Amplifier) {
+	instruction := amplifier.values[amplifier.instructionIndex]
 	opcode, parameterModes := parseInstruction(instruction)
+
+	value1 := getValue(amplifier, parameterModes[0], amplifier.instructionIndex+1)
+	value2 := getValue(amplifier, parameterModes[1], amplifier.instructionIndex+2)
+	index := amplifier.values[amplifier.instructionIndex+3]
 
 	switch opcode {
 	case 1:
-		value1 = getValue(values, parameterModes[0], instructionIndex+1)
-		value2 = getValue(values, parameterModes[1], instructionIndex+2)
-		values[values[instructionIndex+3]] = value1 + value2
-		instructionIndex += 4
+		amplifier.values[index] = value1 + value2
+		amplifier.instructionIndex += 4
 	case 2:
-		value1 = getValue(values, parameterModes[0], instructionIndex+1)
-		value2 = getValue(values, parameterModes[1], instructionIndex+2)
-		values[values[instructionIndex+3]] = value1 * value2
-		instructionIndex += 4
+		amplifier.values[index] = value1 * value2
+		amplifier.instructionIndex += 4
 	case 3:
 		panic("no opcode 3")
 	case 4:
 		panic("no opcode 4")
 	case 5:
-		value1 = getValue(values, parameterModes[0], instructionIndex+1)
-		value2 = getValue(values, parameterModes[1], instructionIndex+2)
-
 		switch value1 {
 		case 0:
-			instructionIndex += 3
+			amplifier.instructionIndex += 3
 		default:
-			instructionIndex = value2
+			amplifier.instructionIndex = value2
 		}
 	case 6:
-		value1 = getValue(values, parameterModes[0], instructionIndex+1)
-		value2 = getValue(values, parameterModes[1], instructionIndex+2)
-
+		fmt.Println(6)
 		switch value1 {
 		case 0:
-			instructionIndex = value2
+			amplifier.instructionIndex = value2
 		default:
-			instructionIndex += 3
+			amplifier.instructionIndex += 3
 		}
 	case 7:
-		value1 = getValue(values, parameterModes[0], instructionIndex+1)
-		value2 = getValue(values, parameterModes[1], instructionIndex+2)
-
+		fmt.Println(7)
 		if value1 < value2 {
-			values[values[instructionIndex+3]] = 1
+			amplifier.values[index] = 1
 		} else {
-			values[values[instructionIndex+3]] = 0
+			amplifier.values[index] = 0
 		}
-		instructionIndex += 4
+		amplifier.instructionIndex += 4
 	case 8:
-		value1 = getValue(values, parameterModes[0], instructionIndex+1)
-		value2 = getValue(values, parameterModes[1], instructionIndex+2)
-
+		fmt.Println(8)
 		if value1 == value2 {
-			values[values[instructionIndex+3]] = 1
+			amplifier.values[index] = 1
 		} else {
-			values[values[instructionIndex+3]] = 0
+			amplifier.values[index] = 0
 		}
-
-		instructionIndex += 4
+		amplifier.instructionIndex += 4
 	case 99:
 		panic("called with opcode 99")
 	default:
 		fmt.Println(opcode)
 		panic("Unexpected fault")
 	}
-
-	return values, instructionIndex
 }
 
-func start(values []int, phaseSetting int) ([]int, int){
+func start(amplifier *Amplifier){
 
-	instructionIndex := 0
 	appliedPhaseSetting := false
 
 	for {
-		instruction := values[instructionIndex]
+		instruction := amplifier.values[amplifier.instructionIndex]
 		opcode, _ := parseInstruction(instruction)
 
 		if opcode == 3{
 			if appliedPhaseSetting{
 				//ready for new input
-				return values, instructionIndex
+				return
 			} else{
-				values, instructionIndex = inputInstruction(values, instructionIndex, phaseSetting)
+				inputInstruction(amplifier, amplifier.phaseSetting)
 				appliedPhaseSetting = true
 			}
 		} else if opcode == 4{
@@ -171,61 +169,52 @@ func start(values []int, phaseSetting int) ([]int, int){
 		} else if opcode == 99{
 			panic("not expected end")
 		} else{
-			values, instructionIndex = executeInstruction(values, instructionIndex)
+			executeInstruction(amplifier)
 		}
-
 	}
 }
 
-func getOutput(values []int, instructionIndex, input int) (int, int) {
+func getOutput(amplifier *Amplifier, input int) int {
 
-	var output int
+	output := input
 
 	for {
 
-		instruction := values[instructionIndex]
+		instruction := amplifier.values[amplifier.instructionIndex]
 		opcode, parameterModes := parseInstruction(instruction)
 
 		switch opcode {
 		case 3:
-			values, instructionIndex = inputInstruction(values, instructionIndex, input)
+			inputInstruction(amplifier, input)
 		case 4:
 			if parameterModes[0] == 0 {
-				output = values[values[instructionIndex+1]]
+				output = amplifier.values[amplifier.values[amplifier.instructionIndex+1]]
 			} else {
-				output = values[instructionIndex+1]
+				output = amplifier.values[amplifier.instructionIndex+1]
 			}
-			instructionIndex += 2
-			return output, instructionIndex
+			amplifier.instructionIndex += 2
+			return output
+		case 99:
+			return output
 		default:
-			values, instructionIndex = executeInstruction(values, instructionIndex)
+			executeInstruction(amplifier)
 		}
 	}
 }
 
-
-func getLastOutput(filename string, phaseSetting int, input int) int {
-	values := get_input(filename)
-
-	values, instructionIndex := start(values, phaseSetting)
-
+func getLastOutput(amplifier *Amplifier, input int) int {
+	start(amplifier)
 	for {
-		output, instructionIndex := getOutput(values, instructionIndex, input)
-
-		instruction := values[instructionIndex]
-		opcode, _ := parseInstruction(instruction)
-
-		if opcode == 99{
+		output := getOutput(amplifier, input)
+		if getOpcode(amplifier) == 99{
 			return output
 		}
 	}
-	
 }
 
-func getCombinations() [][5]int {
+func getCombinations(numbers [5]int) [][5]int {
 
 	combinations := [][5]int{}
-	numbers := []int{0, 1, 2, 3, 4}
 
 	for _, number0 := range numbers {
 		for _, number1 := range numbers {
@@ -262,14 +251,16 @@ func getCombinations() [][5]int {
 
 func part1(fileName string) int {
 	maxOuput := 0
-	// maxCombination := [5]int{0, 0, 0, 0, 0}
-
-	for _, combination := range getCombinations() {
+	numbers := [5]int{0, 1, 2, 3, 4}
+	for _, combination := range getCombinations(numbers) {
 
 		input := 0
 		output := 0
 		for _, phaseSetting := range combination {
-			output = getLastOutput(fileName, phaseSetting, input)
+			values := get_input(fileName)
+
+			amplifier := Amplifier{values, 0, phaseSetting}
+			output = getLastOutput(&amplifier, input)
 			input = output
 		}
 
@@ -282,6 +273,48 @@ func part1(fileName string) int {
 	return maxOuput
 }
 
+func part2(fileName string) int{
+
+	maxOutput := 0
+	numbers := [5]int{5, 6, 7, 8, 9}
+	for _, combination := range getCombinations(numbers) {
+
+		amplifiers := [5]*Amplifier{
+			&Amplifier{get_input(fileName), 0, combination[0]},
+			&Amplifier{get_input(fileName), 0, combination[1]},
+			&Amplifier{get_input(fileName), 0, combination[2]},
+			&Amplifier{get_input(fileName), 0, combination[3]},
+			&Amplifier{get_input(fileName), 0, combination[4]},
+		}
+
+		input := 0
+		output := 0
+
+		outside: for {
+			for _, amplifier := range amplifiers{
+				input = output
+
+				if amplifier.instructionIndex == 0{
+					start(amplifier)
+				} else {
+					output = getOutput(amplifier, input)
+				}
+
+				if getOpcode(amplifier) == 99 {
+					break outside
+				}
+			}
+		}
+
+		if output > maxOutput{
+			maxOutput = output
+		}
+	}
+
+	return maxOutput
+}
+
 func main() {
-	fmt.Println("Result part 1: ", part1("input.txt"))
+	fmt.Println("Result part 1: ", part1("example.txt"))
+	// fmt.Println("Result part 2: ", part2("example.txt"))
 }
