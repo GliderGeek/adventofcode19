@@ -72,99 +72,154 @@ func getValue(values []int, parameterMode int, parameterIndex int) int {
 	}
 }
 
-func getLastOutput(filename string, phaseSetting int, input int) int {
+func inputInstruction(values []int, instructionIndex int, input int) ([]int, int) {
+	values[values[instructionIndex+1]] = input
+	instructionIndex += 2
+	return values, instructionIndex
+}
 
-	var value1, value2, output int
-	values := get_input(filename)
+func executeInstruction(values []int, instructionIndex int) ([]int, int) {
+	var value1, value2 int
+	instruction := values[instructionIndex]
+	opcode, parameterModes := parseInstruction(instruction)
+
+	switch opcode {
+	case 1:
+		value1 = getValue(values, parameterModes[0], instructionIndex+1)
+		value2 = getValue(values, parameterModes[1], instructionIndex+2)
+		values[values[instructionIndex+3]] = value1 + value2
+		instructionIndex += 4
+	case 2:
+		value1 = getValue(values, parameterModes[0], instructionIndex+1)
+		value2 = getValue(values, parameterModes[1], instructionIndex+2)
+		values[values[instructionIndex+3]] = value1 * value2
+		instructionIndex += 4
+	case 3:
+		panic("no opcode 3")
+	case 4:
+		panic("no opcode 4")
+	case 5:
+		value1 = getValue(values, parameterModes[0], instructionIndex+1)
+		value2 = getValue(values, parameterModes[1], instructionIndex+2)
+
+		switch value1 {
+		case 0:
+			instructionIndex += 3
+		default:
+			instructionIndex = value2
+		}
+	case 6:
+		value1 = getValue(values, parameterModes[0], instructionIndex+1)
+		value2 = getValue(values, parameterModes[1], instructionIndex+2)
+
+		switch value1 {
+		case 0:
+			instructionIndex = value2
+		default:
+			instructionIndex += 3
+		}
+	case 7:
+		value1 = getValue(values, parameterModes[0], instructionIndex+1)
+		value2 = getValue(values, parameterModes[1], instructionIndex+2)
+
+		if value1 < value2 {
+			values[values[instructionIndex+3]] = 1
+		} else {
+			values[values[instructionIndex+3]] = 0
+		}
+		instructionIndex += 4
+	case 8:
+		value1 = getValue(values, parameterModes[0], instructionIndex+1)
+		value2 = getValue(values, parameterModes[1], instructionIndex+2)
+
+		if value1 == value2 {
+			values[values[instructionIndex+3]] = 1
+		} else {
+			values[values[instructionIndex+3]] = 0
+		}
+
+		instructionIndex += 4
+	case 99:
+		panic("called with opcode 99")
+	default:
+		fmt.Println(opcode)
+		panic("Unexpected fault")
+	}
+
+	return values, instructionIndex
+}
+
+func start(values []int, phaseSetting int) ([]int, int){
+
 	instructionIndex := 0
-	usedInputs := 0
-	forloop: for {
+	appliedPhaseSetting := false
+
+	for {
+		instruction := values[instructionIndex]
+		opcode, _ := parseInstruction(instruction)
+
+		if opcode == 3{
+			if appliedPhaseSetting{
+				//ready for new input
+				return values, instructionIndex
+			} else{
+				values, instructionIndex = inputInstruction(values, instructionIndex, phaseSetting)
+				appliedPhaseSetting = true
+			}
+		} else if opcode == 4{
+			panic("not expected output")
+		} else if opcode == 99{
+			panic("not expected end")
+		} else{
+			values, instructionIndex = executeInstruction(values, instructionIndex)
+		}
+
+	}
+}
+
+func getOutput(values []int, instructionIndex, input int) (int, int) {
+
+	var output int
+
+	for {
 
 		instruction := values[instructionIndex]
 		opcode, parameterModes := parseInstruction(instruction)
 
 		switch opcode {
-		case 1:
-			value1 = getValue(values, parameterModes[0], instructionIndex+1)
-			value2 = getValue(values, parameterModes[1], instructionIndex+2)
-			values[values[instructionIndex+3]] = value1 + value2
-			instructionIndex += 4
-		case 2:
-			value1 = getValue(values, parameterModes[0], instructionIndex+1)
-			value2 = getValue(values, parameterModes[1], instructionIndex+2)
-			values[values[instructionIndex+3]] = value1 * value2
-			instructionIndex += 4
 		case 3:
-
-			switch usedInputs {
-			case 0:
-				values[values[instructionIndex+1]] = phaseSetting
-			case 1:
-				values[values[instructionIndex+1]] = input
-			default:
-				panic("unsupported number of inputs")
-			}
-
-			instructionIndex += 2
-			usedInputs++
+			values, instructionIndex = inputInstruction(values, instructionIndex, input)
 		case 4:
 			if parameterModes[0] == 0 {
 				output = values[values[instructionIndex+1]]
 			} else {
 				output = values[instructionIndex+1]
 			}
-			// fmt.Println("outputting", output)
 			instructionIndex += 2
-		case 5:
-			value1 = getValue(values, parameterModes[0], instructionIndex+1)
-			value2 = getValue(values, parameterModes[1], instructionIndex+2)
-
-			switch value1 {
-			case 0:
-				instructionIndex += 3
-			default:
-				instructionIndex = value2
-			}
-		case 6:
-			value1 = getValue(values, parameterModes[0], instructionIndex+1)
-			value2 = getValue(values, parameterModes[1], instructionIndex+2)
-
-			switch value1 {
-			case 0:
-				instructionIndex = value2
-			default:
-				instructionIndex += 3
-			}
-		case 7:
-			value1 = getValue(values, parameterModes[0], instructionIndex+1)
-			value2 = getValue(values, parameterModes[1], instructionIndex+2)
-
-			if value1 < value2 {
-				values[values[instructionIndex+3]] = 1
-			} else {
-				values[values[instructionIndex+3]] = 0
-			}
-			instructionIndex += 4
-		case 8:
-			value1 = getValue(values, parameterModes[0], instructionIndex+1)
-			value2 = getValue(values, parameterModes[1], instructionIndex+2)
-
-			if value1 == value2 {
-				values[values[instructionIndex+3]] = 1
-			} else {
-				values[values[instructionIndex+3]] = 0
-			}
-
-			instructionIndex += 4
-		case 99:
-			break forloop
+			return output, instructionIndex
 		default:
-			fmt.Println(opcode)
-			panic("Unexpected fault")
+			values, instructionIndex = executeInstruction(values, instructionIndex)
 		}
 	}
+}
 
-	return output
+
+func getLastOutput(filename string, phaseSetting int, input int) int {
+	values := get_input(filename)
+
+	values, instructionIndex := start(values, phaseSetting)
+
+	for {
+		output, instructionIndex := getOutput(values, instructionIndex, input)
+
+		instruction := values[instructionIndex]
+		opcode, _ := parseInstruction(instruction)
+
+		if opcode == 99{
+			return output
+		}
+	}
+	
 }
 
 func getCombinations() [][5]int {
