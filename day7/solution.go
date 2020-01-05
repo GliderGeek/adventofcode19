@@ -77,12 +77,11 @@ func getLastOutput(filename string, phaseSetting int, input int) int {
 	var value1, value2, output int
 	values := get_input(filename)
 	instructionIndex := 0
-	instruction := values[instructionIndex]
-	opcode, parameterModes := parseInstruction(instruction)
-
 	usedInputs := 0
+	forloop: for {
 
-	for opcode != 99 {
+		instruction := values[instructionIndex]
+		opcode, parameterModes := parseInstruction(instruction)
 
 		switch opcode {
 		case 1:
@@ -157,12 +156,12 @@ func getLastOutput(filename string, phaseSetting int, input int) int {
 			}
 
 			instructionIndex += 4
+		case 99:
+			break forloop
 		default:
 			fmt.Println(opcode)
 			panic("Unexpected fault")
 		}
-		instruction = values[instructionIndex]
-		opcode, parameterModes = parseInstruction(instruction)
 	}
 
 	return output
